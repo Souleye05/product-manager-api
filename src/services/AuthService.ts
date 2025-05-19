@@ -38,13 +38,14 @@ export class AuthService implements IAuthService {
 
       // Créer l'utilisateur
       const newUser = await prisma.user.create({
-        data: {
-          username: userData.username,
-          email: userData.email,
-          password: hashedPassword,
-          role: 'user'
-        }
-      });
+  data: {
+    username: userData.username,
+    email: userData.email,
+    password: hashedPassword,
+    role: userData.role || 'user'
+  }
+});
+
 
       // Créer un token JWT
       const token = this.generateToken(newUser.id, newUser.role);

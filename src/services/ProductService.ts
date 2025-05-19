@@ -4,18 +4,19 @@ import prisma from "../config/prisma";
 import { logger } from "../utils/logger";
 
 export class ProductService implements IProductService {
-  
-  async getAllProducts(limit: number = 10, offset: number = 0): Promise<ProductDTO[]> {
+  async getAllProducts(): Promise<ProductDTO[]> {
     try {
       const products = await prisma.product.findMany({
-        take: limit,
-        skip: offset,
         orderBy: {
           createdAt: 'desc'
         }
       });
       
-      return products;
+      // Mapper les objets Prisma vers ProductDTO
+      return products.map(product => ({
+        ...product,
+        price: Number(product.price) // Convertir Decimal en number
+      }));
     } catch (error) {
       logger.error('Erreur lors de la récupération des produits:', error);
       throw error;
@@ -28,34 +29,47 @@ export class ProductService implements IProductService {
         where: { id }
       });
       
-      return product;
+      if (!product) return null;
+      
+      // Mapper l'objet Prisma vers ProductDTO
+      return {
+        ...product,
+        price: Number(product.price) // Convertir Decimal en number
+      };
     } catch (error) {
-      logger.error('Erreur lors de la recherche du produit par ID:', error);
+      logger.error(`Erreur lors de la récupération du produit ${id}:`, error);
       throw error;
     }
   }
 
-  async getProductsByCategory(category: string, limit: number = 10, offset: number = 0): Promise<ProductDTO[]> {
+  async getProductsByCategory(category: string): Promise<ProductDTO[]> {
     try {
       const products = await prisma.product.findMany({
-        where: { category },
-        take: limit,
-        skip: offset,
+        where: {
+          category: {
+            contains: category,
+            mode: 'insensitive'
+          }
+        },
         orderBy: {
           createdAt: 'desc'
         }
       });
       
-      return products;
+      // Mapper les objets Prisma vers ProductDTO
+      return products.map(product => ({
+        ...product,
+        price: Number(product.price) // Convertir Decimal en number
+      }));
     } catch (error) {
-      logger.error('Erreur lors de la recherche des produits par catégorie:', error);
+      logger.error(`Erreur lors de la récupération des produits de la catégorie ${category}:`, error);
       throw error;
     }
   }
 
-  async createProduct(productData: CreateProductDTO, userId: number): Promise<ProductDTO> {
+  async createProduct(productData: CreateProductDTO, userId?: number): Promise<ProductDTO> {
     try {
-      const product = await prisma.product.create({
+      const newProduct = await prisma.product.create({
         data: {
           name: productData.name,
           description: productData.description,
@@ -63,11 +77,15 @@ export class ProductService implements IProductService {
           quantity: productData.quantity,
           category: productData.category,
           imageUrl: productData.imageUrl,
-          userId: userId
+          userId: userId || null
         }
       });
       
-      return product;
+      // Mapper l'objet Prisma vers ProductDTO
+      return {
+        ...newProduct,
+        price: Number(newProduct.price) // Convertir Decimal en number
+      };
     } catch (error) {
       logger.error('Erreur lors de la création du produit:', error);
       throw error;
@@ -76,62 +94,92 @@ export class ProductService implements IProductService {
 
   async updateProduct(id: number, productData: UpdateProductDTO): Promise<ProductDTO | null> {
     try {
-      const product = await prisma.product.update({
+      // Vérifier si le produit existe
+      const existingProduct = await prisma.product.findUnique({
+        where: { id }
+      });
+      
+      if (!existingProduct) {
+        return null;
+      }
+      
+      // Mettre à jour le produit
+      const updatedProduct = await prisma.product.update({
         where: { id },
         data: productData
       });
       
-      return product;
+      // Mapper l'objet Prisma vers ProductDTO
+      return {
+        ...updatedProduct,
+        price: Number(updatedProduct.price) // Convertir Decimal en number
+      };
     } catch (error) {
-      logger.error('Erreur lors de la mise à jour du produit:', error);
-      
-      // Si l'erreur est due à un produit non trouvé
-      if (error.code === 'P2025') {
-        return null;
-      }
-      
+      logger.error(`Erreur lors de la mise à jour du produit ${id}:`, error);
       throw error;
     }
   }
 
   async deleteProduct(id: number): Promise<boolean> {
     try {
+      // Vérifier si le produit existe
+      const existingProduct = await prisma.product.findUnique({
+        where: { id }
+      });
+      
+      if (!existingProduct) {
+        return false;
+      }
+      
+      // Supprimer le produit
       await prisma.product.delete({
         where: { id }
       });
       
       return true;
     } catch (error) {
-      logger.error('Erreur lors de la suppression du produit:', error);
-      
-      // Si l'erreur est due à un produit non trouvé
-      if (error.code === 'P2025') {
-        return false;
-      }
-      
+      logger.error(`Erreur lors de la suppression du produit ${id}:`, error);
       throw error;
     }
   }
 
-  async searchProducts(query: string, limit: number = 10, offset: number = 0): Promise<ProductDTO[]> {
+  async searchProducts(query: string): Promise<ProductDTO[]> {
     try {
       const products = await prisma.product.findMany({
         where: {
           OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-            { description: { contains: query, mode: 'insensitive' } }
+            {
+              name: {
+                contains: query,
+                mode: 'insensitive'
+              }
+            },
+            {
+              description: {
+                contains: query,
+                mode: 'insensitive'
+              }
+            },
+            {
+              category: {
+                contains: query,
+                mode: 'insensitive'
+              }
+            }
           ]
         },
-        take: limit,
-        skip: offset,
         orderBy: {
           createdAt: 'desc'
         }
       });
       
-      return products;
+      // Mapper les objets Prisma vers ProductDTO
+      return products.map(product => ({
+        ...product,
+        price: Number(product.price) // Convertir Decimal en number
+      }));
     } catch (error) {
-      logger.error('Erreur lors de la recherche de produits:', error);
+      logger.error(`Erreur lors de la recherche de produits "${query}":`, error);
       throw error;
     }
   }

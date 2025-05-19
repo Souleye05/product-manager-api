@@ -6,6 +6,6 @@ const router = Router();
 
 // Définir les routes
 router.use('/auth', authRoutes);
-// router.use('/products', productRoutes);
+router.use('/products', productRoutes);
 
 export default router;
