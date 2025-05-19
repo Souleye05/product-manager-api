@@ -1,21 +1,42 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import passport from './config/passport';
-import authRoutes from './api/routes/authRoutes';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { config } from 'dotenv';
+import routes from './api/routes';
+import { errorHandler, notFound } from './api/middlewares/errorHandler';
+import { logger } from './utils/logger';
 
-dotenv.config();
+// Charger les variables d'environnement
+config();
+
+// Initialiser l'application Express
 const app = express();
 
+// Middlewares
 app.use(cors());
+app.use(helmet());
 app.use(express.json());
-app.use(passport.initialize());
+app.use(express.urlencoded({ extended: true }));
+
+// Logger les requêtes
+app.use(morgan('dev'));
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api', routes);
 
-const PORT = process.env.PORT || 5002;
+// Middleware pour les routes non trouvées
+app.use(notFound);
+
+// Middleware de gestion d'erreurs
+app.use(errorHandler);
+
+// Port d'écoute
+const PORT = process.env.PORT || 3000;
+
+// Démarrer le serveur
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  logger.info(`Serveur démarré sur le port ${PORT}`);
 });
+
 export default app;

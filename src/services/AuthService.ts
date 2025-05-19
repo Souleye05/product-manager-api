@@ -136,7 +136,7 @@ export class AuthService implements IAuthService {
     return jwt.sign(
       { id: userId, role },
       this.jwtSecret,
-      { expiresIn: this.jwtExpiresIn }
+      { expiresIn: this.jwtExpiresIn } as jwt.SignOptions
     );
   }
 }
